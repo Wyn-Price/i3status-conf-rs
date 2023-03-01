@@ -18,7 +18,7 @@ async fn main() -> Result<()> {
     let sections = init_sections(&proxy);
     
     loop {
-        thread::sleep(time::Duration::from_millis(100));
+        thread::sleep(time::Duration::from_millis(200));
         let strings = sections.update().await?;
         println!("{}", strings.join(" "));
     }

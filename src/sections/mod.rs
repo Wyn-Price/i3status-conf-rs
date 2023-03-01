@@ -1,16 +1,20 @@
 mod time_duration;
-
-use std::future;
+mod time_progress_bar;
 
 use async_trait::async_trait;
 use zbus::Result;
 
 use crate::dbus::SpotifyMediaPlayerProxy;
 
-use self::time_duration::TimeDuration;
+use self::{time_duration::TimeDuration, time_progress_bar::TimeProgressBar};
 
 pub struct SectionList<'a> {
     sections: Vec<Box<dyn Section<'a> + 'a>>,
+}
+
+#[async_trait]
+trait Section<'a> {
+    async fn update(&self) -> Result<String>;
 }
 
 impl SectionList<'_> {
@@ -27,14 +31,8 @@ impl SectionList<'_> {
 pub fn init_sections<'a>(proxy: &'a SpotifyMediaPlayerProxy<'a>) -> SectionList<'a> {
     return SectionList {
         sections: vec![
-            Box::new(
-                TimeDuration { proxy }
-            )
+            Box::new( TimeDuration { proxy } ),
+            Box::new( TimeProgressBar { width: 50, proxy } ),
         ],
     };
-}
-
-#[async_trait]
-trait Section<'a> {
-    async fn update(&self) -> Result<String>;
 }
