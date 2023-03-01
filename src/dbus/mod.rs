@@ -1,6 +1,7 @@
 mod loop_status;
 mod playback_status;
-mod metadata;
+pub mod metadata;
+
 
 use zbus::{dbus_proxy, Result};
 
@@ -45,6 +46,3 @@ trait SpotifyMediaPlayer {
     #[dbus_proxy(property, name = "Metadata")]
     fn metadata(&self) -> Result<TrackMetadata>;
 }
-
-
-

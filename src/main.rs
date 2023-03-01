@@ -1,15 +1,25 @@
 mod dbus;
+mod sections;
 
-use zbus::{Connection, Result};
+use std::{time, thread};
 
+use sections::init_sections;
+use zbus::{Connection, Result, CacheProperties};
+use tokio;
 
-// Although we use `async-std` here, you can use any async runtime of choice.
-#[async_std::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
     let connection = Connection::session().await?;
 
-    // `dbus_proxy` macro creates `MyGreaterProxy` based on `Notifications` trait.
-    let proxy = dbus::SpotifyMediaPlayerProxy::new(&connection).await?;
-    // proxy.play_pause().await?;
-    Ok(())
+    let proxy = dbus::SpotifyMediaPlayerProxy::builder(&connection)
+        .cache_properties(CacheProperties::No)
+        .build().await?;
+    
+    let sections = init_sections(&proxy);
+    
+    loop {
+        thread::sleep(time::Duration::from_millis(100));
+        let strings = sections.update().await?;
+        println!("{}", strings.join(" "));
+    }
 }
