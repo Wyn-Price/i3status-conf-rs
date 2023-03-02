@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use zbus::Result;
 
-use crate::dbus::SpotifyMediaPlayerProxy;
+use crate::{dbus::SpotifyMediaPlayerProxy, input::ClickEvent};
 use super::Section;
 
 const NUM_CHARS: usize = 8;
@@ -17,7 +17,7 @@ pub struct TimeProgressBar<'a> {
 
 #[async_trait]
 impl Section<'_> for TimeProgressBar<'_> {
-    async fn update(&self) -> Result<String> {
+    async fn update(&mut self, _click_event: &Option<ClickEvent>) -> Result<String> {
         let position = self.proxy.position().await? as f64;
         let total = self.proxy.metadata().await?.track_length as f64;
 
@@ -31,6 +31,13 @@ impl Section<'_> for TimeProgressBar<'_> {
             str += &EMPTY_CHARACTER.to_string().repeat(self.width as usize - progress as usize - 1);
         }
 
-        Ok(format!("[{}]", str))
+        Ok(format!("{}[{}]{}", convert_time(position), str, convert_time(total)))
     }
+}
+
+fn convert_time(time: f64) -> String {
+    let minutes = time as i64 / (1000000 * 60);
+    let seconds = (time as i64 / 1000000) - (minutes * 60);
+
+    return format!("{:0>1}:{:0>2}", minutes, seconds);
 }
