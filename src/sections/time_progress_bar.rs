@@ -1,5 +1,8 @@
+use std::fmt::format;
+
 use async_trait::async_trait;
 use zbus::Result;
+use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{dbus::SpotifyMediaPlayerProxy, input::ClickEvent};
 use super::Section;
@@ -17,7 +20,7 @@ pub struct TimeProgressBar<'a> {
 
 #[async_trait]
 impl Section<'_> for TimeProgressBar<'_> {
-    async fn update(&mut self, _click_event: &Option<ClickEvent>) -> Result<String> {
+    async fn update(&mut self, click_event: &Option<ClickEvent>) -> Result<String> {
         let position = self.proxy.position().await? as f64;
         let total = self.proxy.metadata().await?.track_length as f64;
 
@@ -31,7 +34,30 @@ impl Section<'_> for TimeProgressBar<'_> {
             str += &EMPTY_CHARACTER.to_string().repeat(self.width as usize - progress as usize - 1);
         }
 
-        Ok(format!("{}[{}]{}", convert_time(position), str, convert_time(total)))
+        let prefix = format!("{}[", convert_time(position));
+        let suffix = format!("]{}", convert_time(total));
+
+        let prefix_size = prefix.graphemes(true).count();
+        let suffix_size = suffix.graphemes(true).count();
+
+        if let Some(click) = click_event {
+            let pixels_per_char = click.width / click.full_text.graphemes(true).count();
+
+            let pixels_prefix = prefix_size * pixels_per_char;
+            let pixels_suffix = suffix_size * pixels_per_char;
+
+            if click.relative_x >= pixels_prefix && click.relative_x <= click.width - pixels_suffix {
+                let progress = (click.relative_x - pixels_prefix) as f64 / (click.width - pixels_suffix - pixels_prefix) as f64;
+
+                let target = (progress * total) as i64;
+                let current = position as i64;
+
+                // The seek function seems to add one second, maybe try and use the `SetOffset` function?
+                self.proxy.seek_plus_one_second(target - current - 1000000).await?;
+            }
+        }
+
+        Ok(format!("{}{}{}", prefix, str, suffix))
     }
 }
 

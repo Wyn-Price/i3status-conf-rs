@@ -11,6 +11,9 @@ use tokio;
 
 use std::env;
 
+const CHECK_INTERVAL: u64 = 50;
+const NUM_FAILED_FORCE_RENDER: i32 = 4;
+
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
     let connection = Connection::session().await?;
@@ -28,9 +31,13 @@ async fn main() -> Result<()> {
     let click_event_channel = spawn_click_event_channel();
 
     loop {
-        thread::sleep(time::Duration::from_millis(200));
-        let click_event = click_event_channel.try_recv().ok();
-        let strings = sections.update(click_event).await?;
-        println!("{{\"full_text\": \"{}\"}}", strings.join(" | "));
+        for i in 0..NUM_FAILED_FORCE_RENDER {
+            thread::sleep(time::Duration::from_millis(CHECK_INTERVAL));
+            let click_event = click_event_channel.try_recv().ok();
+            if i == 0 || click_event.is_some() {
+                let strings = sections.update(click_event).await?;
+                println!("{{\"full_text\": \"{}\"}}", strings.join(" | "));
+            }
+        }
     }
 }

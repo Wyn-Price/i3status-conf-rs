@@ -22,6 +22,9 @@ trait SpotifyMediaPlayer {
     #[dbus_proxy(name = "Previous")]
     async fn previous(&self) -> Result<()>;
 
+    #[dbus_proxy(name = "Seek")]
+    async fn seek_plus_one_second(&self, pos: i64) -> Result<()>;
+
     #[dbus_proxy(property, name = "CanGoNext")]
     fn can_next(&self) -> Result<bool>;
 

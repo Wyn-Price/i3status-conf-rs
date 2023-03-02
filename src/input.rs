@@ -20,14 +20,15 @@ pub fn spawn_click_event_channel() -> Receiver<ClickEvent> {
 
 #[derive(Debug, Deserialize)]
 pub struct ClickEvent {
-    button: u8,
-    modifiers: Vec<String>,
-    x: usize,
-    y: usize,
-    relative_x: usize,
-    relative_y: usize,
-    output_x: usize,
-    output_y: usize,
-    width: usize,
-    height: usize,
+    pub button: u8,
+    pub full_text: String,
+    pub modifiers: Vec<String>,
+    pub x: usize,
+    pub y: usize,
+    pub relative_x: usize,
+    pub relative_y: usize,
+    pub output_x: usize,
+    pub output_y: usize,
+    pub width: usize,
+    pub height: usize,
 }
