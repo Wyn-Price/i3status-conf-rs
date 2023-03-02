@@ -9,6 +9,8 @@ use sections::init_sections;
 use zbus::{Connection, Result, CacheProperties};
 use tokio;
 
+use std::env;
+
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
     let connection = Connection::session().await?;
@@ -17,7 +19,12 @@ async fn main() -> Result<()> {
         .cache_properties(CacheProperties::No)
         .build().await?;
 
-    let mut sections = init_sections(&proxy);
+    let mut args: Vec<_> = env::args().collect();
+
+    // Remove the program arg
+    args.remove(0);
+
+    let mut sections = init_sections(&proxy, args);
     let click_event_channel = spawn_click_event_channel();
 
     loop {

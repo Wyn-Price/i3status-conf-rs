@@ -28,11 +28,24 @@ impl SectionList<'_> {
     }
 }
 
-pub fn init_sections<'a>(proxy: &'a SpotifyMediaPlayerProxy<'a>) -> SectionList<'a> {
+pub fn init_sections<'a>(proxy: &'a SpotifyMediaPlayerProxy<'a>, mut blocks: Vec<String>) -> SectionList<'a> {
+    if blocks.is_empty() {
+        blocks.append(&mut vec![
+            "title".to_owned(),
+            "progress".to_owned()
+        ]);
+    }
     return SectionList {
-        sections: vec![
-            Box::new( TitleArtist { proxy } ),
-            Box::new( TimeProgressBar { width: 20, proxy } ),
-        ],
+        sections: blocks.iter().map(|b| {
+            let b: Box<dyn Section> = match b.as_str() {
+                "title" => Box::new( TitleArtist { proxy } ),
+                "progress" => Box::new( TimeProgressBar { width: 20, proxy } ),
+                _ => {
+                    println!("Unknown bar {b}");
+                    panic!("Unknown bar {b}");
+                }
+            };
+            b
+        }).collect()
     };
 }
