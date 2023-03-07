@@ -14,15 +14,16 @@ pub struct BPM<'a> {
 
 pub struct LastSearched {
     query: String,
-    bpm: u16
+    bpm: u16,
+    key: String,
 }
 
 impl BPM<'_> {
-    async fn get_bpm(&mut self, query: String) -> Result<u16> {
+    async fn ensure_bpm_and_key(&mut self, query: String) -> Result<()> {
 
         if let Some(last) = &self.last_searched {
             if last.query == query {
-                return Ok(last.bpm);
+                return Ok(());
             }
         }
 
@@ -51,17 +52,21 @@ impl BPM<'_> {
             .await
             .or_else(|er| Err(Error::Failure(format!("Error parsing to json {}", er))))?;
 
-        let selector = Selector::parse("span.text-2xl.font-bold.text-gray-700.sm\\:text-3xl.sm\\:font-normal").unwrap();
+        let bpm_selector = Selector::parse("span.text-2xl.font-bold.text-gray-700.sm\\:text-3xl.sm\\:font-normal").unwrap();
+        let key_selector = Selector::parse("span.text-2xl.text-gray-700.sm\\:text-3xl").unwrap();
 
         let doc = Html::parse_document(page.as_str());
-        let found = doc.select(&selector).next().unwrap();
+        let found_bpm = doc.select(&bpm_selector).next().unwrap();
+        let found_key = doc.select(&key_selector).next().unwrap();
 
-        let bpm = found.inner_html().parse::<u16>()
+        let bpm = found_bpm.inner_html().parse::<u16>()
             .or_else(|er| Err(Error::Failure(format!("Error number {}", er))))?;
+        let key = found_key.inner_html();
 
-        self.last_searched = Some(LastSearched { query, bpm });
+        let ls = LastSearched { query, bpm, key };
+        self.last_searched = Some(ls);
 
-        return Ok(bpm);
+        return Ok(());
     }
 }
 
@@ -72,9 +77,11 @@ impl Section<'_> for BPM<'_> {
 
         let query = format!("{} - {}", metadata.title, metadata.artist.get(0).unwrap());
 
-        let bpm = self.get_bpm(query).await.unwrap();
+        self.ensure_bpm_and_key(query).await.unwrap();
 
-        Ok(format!("BPM: {}", bpm))
+        let data = self.last_searched.as_ref().unwrap();
+
+        Ok(format!("BPM: {} | KEY: {}", data.bpm, data.key))
     }
 
 }
