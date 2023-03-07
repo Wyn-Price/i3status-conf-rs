@@ -1,12 +1,13 @@
 mod time_progress_bar;
 mod title_artist;
+mod bpm;
 
 use async_trait::async_trait;
-use zbus::Result;
+use zbus::{Result, Error};
 
 use crate::{dbus::SpotifyMediaPlayerProxy, input::ClickEvent};
 
-use self::{time_progress_bar::TimeProgressBar, title_artist::TitleArtist};
+use self::{time_progress_bar::TimeProgressBar, title_artist::TitleArtist, bpm::BPM};
 
 pub struct SectionList<'a> {
     sections: Vec<Box<dyn Section<'a> + 'a>>,
@@ -28,24 +29,21 @@ impl SectionList<'_> {
     }
 }
 
-pub fn init_sections<'a>(proxy: &'a SpotifyMediaPlayerProxy<'a>, mut blocks: Vec<String>) -> SectionList<'a> {
-    if blocks.is_empty() {
-        blocks.append(&mut vec![
-            "title".to_owned(),
-            "progress".to_owned()
-        ]);
+pub fn init_sections<'a>(proxy: &'a SpotifyMediaPlayerProxy<'a>, blocks: Vec<String>) -> Result<SectionList<'a>> {
+    let sections_res: Result<Vec<Box<dyn Section<'_>>>> = blocks.iter().map(|b| -> Result<Box<dyn Section<'_>>> {
+        return match b.as_str() {
+            "bpm" => Ok(Box::new( BPM { proxy, last_searched: None } )),
+            "title" => Ok(Box::new( TitleArtist { proxy } )),
+            "progress" => Ok(Box::new( TimeProgressBar { width: 20, proxy } )),
+            _ => Err(Error::Failure("Unknown bar {b}".to_owned())),
+        };
+    }).collect();
+
+    let sections = sections_res?;
+
+    if sections.len() == 0 {
+        return Err(Error::Failure("No sections specified".to_owned()));
     }
-    return SectionList {
-        sections: blocks.iter().map(|b| {
-            let b: Box<dyn Section> = match b.as_str() {
-                "title" => Box::new( TitleArtist { proxy } ),
-                "progress" => Box::new( TimeProgressBar { width: 20, proxy } ),
-                _ => {
-                    println!("Unknown bar {b}");
-                    panic!("Unknown bar {b}");
-                }
-            };
-            b
-        }).collect()
-    };
+
+    return Ok(SectionList { sections });
 }

@@ -46,7 +46,11 @@ impl Section<'_> for TimeProgressBar<'_> {
             let pixels_prefix = prefix_size * pixels_per_char;
             let pixels_suffix = suffix_size * pixels_per_char;
 
-            if click.relative_x >= pixels_prefix && click.relative_x <= click.width - pixels_suffix {
+            if click.relative_x < pixels_prefix {
+                self.proxy.previous().await?;
+            } else if click.relative_x > click.width - pixels_suffix {
+                self.proxy.next().await?;
+            } else {
                 let progress = (click.relative_x - pixels_prefix) as f64 / (click.width - pixels_suffix - pixels_prefix) as f64;
 
                 let target = (progress * total) as i64;

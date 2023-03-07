@@ -2,11 +2,12 @@ mod dbus;
 mod sections;
 mod input;
 
-use std::{time, thread};
+use std::{time, thread, path::Component};
 
+use dbus::SpotifyMediaPlayerProxy;
 use input::spawn_click_event_channel;
 use sections::init_sections;
-use zbus::{Connection, Result, CacheProperties};
+use zbus::{Connection, Error, Result, CacheProperties};
 use tokio;
 
 use std::env;
@@ -14,20 +15,36 @@ use std::env;
 const CHECK_INTERVAL: u64 = 50;
 const NUM_FAILED_FORCE_RENDER: i32 = 4;
 
+const ERROR_WAIT_TIMEOUT: u64 = 500;
+
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
     let connection = Connection::session().await?;
+    loop {
+        match main_loop(&connection).await {
+            Ok(_) => Err(Error::Failure("Should not finish the main loop".to_owned())),
+            Err(err) => {
+                println!("Encountered err {}, retrying", err);
+                thread::sleep(time::Duration::from_millis(ERROR_WAIT_TIMEOUT));
+                Ok(())
+            }
+        }?
 
-    let proxy = dbus::SpotifyMediaPlayerProxy::builder(&connection)
-        .cache_properties(CacheProperties::No)
-        .build().await?;
+    }
+}
+
+
+async fn main_loop(connection: &Connection) -> Result<()> {
+    let proxy = dbus::SpotifyMediaPlayerProxy::builder(connection)
+    .cache_properties(CacheProperties::No)
+    .build().await?;
 
     let mut args: Vec<_> = env::args().collect();
 
     // Remove the program arg
     args.remove(0);
 
-    let mut sections = init_sections(&proxy, args);
+    let mut sections = init_sections(&proxy, args)?;
     let click_event_channel = spawn_click_event_channel();
 
     loop {
