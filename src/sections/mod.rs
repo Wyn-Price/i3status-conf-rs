@@ -35,7 +35,7 @@ pub fn init_sections<'a>(proxy: &'a SpotifyMediaPlayerProxy<'a>, blocks: Vec<Str
             "bpm" => Ok(Box::new( BPM { proxy, last_searched: None } )),
             "title" => Ok(Box::new( TitleArtist { proxy } )),
             "progress" => Ok(Box::new( TimeProgressBar { width: 20, proxy } )),
-            _ => Err(Error::Failure("Unknown bar {b}".to_owned())),
+            _ => Err(Error::Failure(format!("Unknown bar {b}"))),
         };
     }).collect();
 

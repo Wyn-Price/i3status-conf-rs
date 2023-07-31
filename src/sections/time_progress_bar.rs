@@ -1,13 +1,16 @@
 use std::fmt::format;
 
 use async_trait::async_trait;
-use zbus::Result;
 use unicode_segmentation::UnicodeSegmentation;
+use zbus::Result;
 
-use crate::{dbus::SpotifyMediaPlayerProxy, input::ClickEvent};
+use crate::{dbus::SpotifyMediaPlayerProxy, input::ClickEvent, dbus::playback_status::PlaybackStatus};
+
 use super::Section;
 
 const NUM_CHARS: usize = 8;
+const PLAY_CHAR: char = '⏵';
+const PAUSE_CHAR: char = '⏸';
 const PROGRESS_CHARS: [char; NUM_CHARS] = [
     '▏', '▎', '▍', '▌', '▋', '▊', '▉', '█'
 ];
@@ -34,24 +37,36 @@ impl Section<'_> for TimeProgressBar<'_> {
             str += &EMPTY_CHARACTER.to_string().repeat(self.width as usize - progress as usize - 1);
         }
 
-        let prefix = format!("{}[", convert_time(position));
+        let pause_play = self.proxy.playback_status().await?;
+        let pause_play_char = match pause_play {
+            PlaybackStatus::Playing => PAUSE_CHAR,
+            PlaybackStatus::Paused => PLAY_CHAR,
+        };
+
+        let prefix = format!("{}{}[", pause_play_char, convert_time(position));
         let suffix = format!("]{}", convert_time(total));
 
+        let pause_play_size = format!("{}", pause_play_char).graphemes(true).count();
         let prefix_size = prefix.graphemes(true).count();
         let suffix_size = suffix.graphemes(true).count();
 
         if let Some(click) = click_event {
             let pixels_per_char = click.width / click.full_text.graphemes(true).count();
 
+            let pixels_pause_play = pause_play_size * pixels_per_char;
             let pixels_prefix = prefix_size * pixels_per_char;
             let pixels_suffix = suffix_size * pixels_per_char;
 
-            if click.relative_x < pixels_prefix {
+            let relx = if click.relative_x >= 3 {click.relative_x - 3 } else { 0 };
+
+            if relx < pixels_pause_play {
+                self.proxy.play_pause().await?;
+            } else if relx < pixels_prefix {
                 self.proxy.previous().await?;
-            } else if click.relative_x > click.width - pixels_suffix {
+            } else if relx > click.width - pixels_suffix {
                 self.proxy.next().await?;
             } else {
-                let progress = (click.relative_x - pixels_prefix) as f64 / (click.width - pixels_suffix - pixels_prefix) as f64;
+                let progress = (relx - pixels_prefix) as f64 / (click.width - pixels_suffix - pixels_prefix) as f64;
 
                 let target = (progress * total) as i64;
                 let current = position as i64;

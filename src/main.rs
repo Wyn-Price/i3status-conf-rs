@@ -2,9 +2,8 @@ mod dbus;
 mod sections;
 mod input;
 
-use std::{time, thread, path::Component};
+use std::{time, thread};
 
-use dbus::SpotifyMediaPlayerProxy;
 use input::spawn_click_event_channel;
 use sections::init_sections;
 use zbus::{Connection, Error, Result, CacheProperties};
