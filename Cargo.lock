@@ -802,7 +802,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "i3status-rs-spotify"
+name = "i3status-confi-rs"
 version = "0.1.0"
 dependencies = [
  "async-trait",
