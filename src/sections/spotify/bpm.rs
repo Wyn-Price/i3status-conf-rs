@@ -3,11 +3,11 @@ use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 use zbus::{Result, Error};
 
-use crate::{dbus::SpotifyMediaPlayerProxy, input::ClickEvent};
-use super::Section;
+use crate::{dbus::SpotifyMediaPlayerProxy, input::ClickEvent, sections::{simple_result, ReturnedResult}};
+use super::super::Section;
 
 pub struct BPM<'a> {
-    pub proxy: &'a SpotifyMediaPlayerProxy<'a>,
+    pub proxy: SpotifyMediaPlayerProxy<'a>,
 
     pub last_searched: Option<LastSearched>,
 }
@@ -72,7 +72,7 @@ impl BPM<'_> {
 
 #[async_trait]
 impl Section<'_> for BPM<'_> {
-    async fn update(&mut self, _click_event: &Option<ClickEvent>) -> Result<String> {
+    async fn update(&mut self, _click_event: &Option<ClickEvent>) -> Result<ReturnedResult> {
         let metadata = self.proxy.metadata().await?;
 
         let query = format!("{} - {}", metadata.title, metadata.artist.get(0).unwrap());
@@ -81,7 +81,7 @@ impl Section<'_> for BPM<'_> {
 
         let data = self.last_searched.as_ref().unwrap();
 
-        Ok(format!("BPM: {} | KEY: {}", data.bpm, data.key))
+        Ok(simple_result(format!("BPM: {} | KEY: {}", data.bpm, data.key)))
     }
 
 }

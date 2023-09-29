@@ -1,12 +1,10 @@
-use std::fmt::format;
-
 use async_trait::async_trait;
 use unicode_segmentation::UnicodeSegmentation;
 use zbus::Result;
 
-use crate::{dbus::SpotifyMediaPlayerProxy, input::ClickEvent, dbus::playback_status::PlaybackStatus};
+use crate::{dbus::{SpotifyMediaPlayerProxy, playback_status::PlaybackStatus}, input::ClickEvent, sections::{ReturnedResult, simple_result}};
 
-use super::Section;
+use super::super::Section;
 
 const NUM_CHARS: usize = 8;
 const PLAY_CHAR: char = '⏵';
@@ -17,13 +15,13 @@ const PROGRESS_CHARS: [char; NUM_CHARS] = [
 const EMPTY_CHARACTER: char = ' ';
 
 pub struct TimeProgressBar<'a> {
-    pub proxy: &'a SpotifyMediaPlayerProxy<'a>,
+    pub proxy: SpotifyMediaPlayerProxy<'a>,
     pub width: u8,
 }
 
 #[async_trait]
 impl Section<'_> for TimeProgressBar<'_> {
-    async fn update(&mut self, click_event: &Option<ClickEvent>) -> Result<String> {
+    async fn update(&mut self, click_event: &Option<ClickEvent>) -> Result<ReturnedResult> {
         let position = self.proxy.position().await? as f64;
         let total = self.proxy.metadata().await?.track_length as f64;
 
@@ -76,7 +74,7 @@ impl Section<'_> for TimeProgressBar<'_> {
             }
         }
 
-        Ok(format!("{}{}{}", prefix, str, suffix))
+        Ok(simple_result(format!("{}{}{}", prefix, str, suffix)))
     }
 }
 
